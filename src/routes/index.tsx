@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { usernameToEmail } from "@/lib/username";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,7 +21,21 @@ function Index() {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState<"" | "user" | "pass" | "login">("");
-  const submit = () => setErr(!u ? "user" : !p ? "pass" : "login");
+  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => { if (data.user) navigate({ to: "/dashboard", search: { u: undefined } }); });
+  }, [navigate]);
+  const submit = async () => {
+    if (!u) return setErr("user");
+    if (!p) return setErr("pass");
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: usernameToEmail(u), password: p });
+    setBusy(false);
+    if (error) return setErr("login");
+    setErr("");
+    navigate({ to: "/dashboard", search: { u: undefined } });
+  };
   return (
     <div className="login-screen">
       <div className="login-box">
@@ -37,7 +53,7 @@ function Index() {
           {err === "pass" && <span>*Enter your password</span>}
           {err === "login" && <span>*Username or password incorrect</span>}
         </div>
-        <button className="login-btn" onClick={submit}>Login</button>
+        <button className="login-btn" disabled={busy} onClick={submit}>Login</button>
       </div>
     </div>
   );
