@@ -6,7 +6,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { useMe } from "@/lib/use-me";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  validateSearch: (s: Record<string, unknown>) => ({ u: typeof s.u === "string" ? s.u : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ u: typeof s["u"] === "string" ? (s["u"] as string) : undefined }),
   head: () => ({ meta: [{ title: "Llogaria — 90Plus" }, { name: "robots", content: "noindex" }] }),
   component: Dashboard,
 });
@@ -33,7 +33,7 @@ function Dashboard() {
     queryFn: async () => (await supabase.from("profiles").select("*").eq("id", targetId!).maybeSingle()).data,
   });
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ full_name: "", id_number: "", city: "", address: "", phone: "", email: "", balance: "0", overdraft: "0", pending: "0" });
   const [err, setErr] = useState("");
 
   function startEdit() {
@@ -45,11 +45,11 @@ function Dashboard() {
     setErr(""); setEditing(true);
   }
   async function save() {
-    const nums = ["balance", "overdraft", "pending"].map((k) => Number(form[k]));
+    const nums = [form.balance, form.overdraft, form.pending].map(Number);
     if (nums.some((n) => Number.isNaN(n))) return setErr("Shumat duhet të jenë numra");
     const { error } = await supabase.from("profiles").update({
       full_name: form.full_name, id_number: form.id_number, city: form.city, address: form.address, phone: form.phone, email: form.email,
-      balance: nums[0], overdraft: nums[1], pending: nums[2],
+      balance: nums[0]!, overdraft: nums[1]!, pending: nums[2]!,
     }).eq("id", targetId!);
     if (error) return setErr("Nuk u ruajt");
     setEditing(false);
